@@ -1,0 +1,11 @@
+{
+  "name": "191 Manager",
+  "short_name": "191 Manager",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#111111",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": []
+}
