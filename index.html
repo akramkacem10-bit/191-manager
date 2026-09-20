@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111"><link rel="manifest" href="manifest.webmanifest">
+<title>191 Manager</title>
+<style>
+:root{--bg:#f5f5f5;--card:#fff;--ink:#171717;--muted:#777;--line:#e5e5e5;--accent:#111}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+header{background:#111;color:#fff;padding:18px 16px 14px;position:sticky;top:0;z-index:5}
+.brand{font-size:25px;font-weight:800}.sub{color:#bbb;font-size:12px;margin-top:4px}
+nav{position:sticky;top:77px;z-index:4;background:#fff;border-bottom:1px solid var(--line);display:flex;overflow:auto;gap:6px;padding:8px}
+nav button{border:0;background:#eee;border-radius:9px;padding:9px 12px;white-space:nowrap;font-weight:700}
+nav button.active{background:#111;color:#fff}
+main{max-width:1100px;margin:auto;padding:14px}.screen{display:none}.screen.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.metric{font-size:24px;font-weight:800;margin-top:8px}.muted{color:var(--muted);font-size:12px}
+form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px}
+label{font-size:12px;font-weight:700}input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-top:4px;background:#fff}
+button.primary{background:#111;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;margin-top:10px}
+button.secondary{border:0;border-radius:9px;padding:9px 12px;background:#eee;font-weight:700}
+.pos{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}@media(max-width:760px){.pos{grid-template-columns:1fr}}
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.prod{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:right}.prod b{display:block}.prod small{color:#777}.prod button{width:100%;margin-top:8px}
+.cart{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;position:sticky;top:130px;height:max-content}
+.cartrow{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #eee;padding:8px 0}.danger{background:#b42318;color:#fff;border:0;border-radius:7px;padding:6px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}th,td{padding:8px;border-bottom:1px solid #eee;text-align:right;font-size:12px}th{background:#eee}
+.alert{background:#fff3cd;border:1px solid #ffe69c;border-radius:10px;padding:10px;margin:10px 0}.ok{background:#d1e7dd;border-color:#a3cfbb}
+h2{margin:8px 0 12px}
+</style></head>
+<body>
+<header><div class="brand">191 Manager</div><div class="sub">POS • Stock • Recettes • Dépenses • Employés • Marges</div></header>
+<nav id="nav"></nav>
+<main>
+<section id="dash" class="screen active"><h2>لوحة القيادة</h2><div class="grid">
+<div class="card">مبيعات اليوم<div class="metric" id="mSales">0 DA</div></div>
+<div class="card">عدد الطلبات<div class="metric" id="mOrders">0</div></div>
+<div class="card">تكلفة المواد<div class="metric" id="mCost">0 DA</div></div>
+<div class="card">الهامش الإجمالي<div class="metric" id="mMargin">0 DA</div></div>
+<div class="card">المصاريف<div class="metric" id="mExp">0 DA</div></div>
+<div class="card">النتيجة<div class="metric" id="mResult">0 DA</div></div>
+</div><div id="alerts"></div></section>
+
+<section id="pos" class="screen"><h2>🧾 caisse / POS</h2><div class="pos"><div><div class="products" id="prodBtns"></div></div><div class="cart"><h3>الطلب الحالي</h3><div id="cart"></div><hr><b>المجموع: <span id="cartTotal">0 DA</span></b><button class="primary" style="width:100%" onclick="checkout()">تسجيل البيع</button><button class="secondary" style="width:100%;margin-top:7px" onclick="clearCart()">إفراغ</button></div></div></section>
+
+<section id="stock" class="screen"><h2>📦 المخزون</h2>
+<form id="stockForm"><div class="row"><div><label>المادة</label><select id="sItem"></select></div><div><label>كمية داخلة (+) أو خارجة (-)</label><input id="sQty" type="number" step="0.01" required></div><div><label>الوحدة</label><select id="sUnit"><option>g</option><option>kg</option><option>pièce</option><option>L</option><option>unité</option></select></div><div><label>سبب</label><input id="sReason" placeholder="Achat / perte / correction"></div></div><button class="primary">تحديث المخزون</button></form>
+<table><thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>تكلفة/وحدة</th><th>قيمة</th><th>الحالة</th></tr></thead><tbody id="stockTable"></tbody></table></section>
+
+<section id="recipes" class="screen"><h2>🍔 المنتجات والوصفات</h2>
+<p class="muted">في هذه النسخة، المنتج مرتبط بمواد خام. يمكنك تعديل الكميات من بيانات الوصفة داخل المتصفح لاحقًا؛ النموذج الأساسي موجود لتطوير V3.</p>
+<table><thead><tr><th>المنتج</th><th>سعر البيع</th><th>تكلفة تقديرية</th><th>الهامش</th><th>%</th></tr></thead><tbody id="recipeTable"></tbody></table></section>
+
+<section id="finance" class="screen"><h2>💰 المداخيل والمصاريف</h2>
+<form id="finForm"><div class="row"><div><label>النوع</label><select id="fType"><option value="expense">مصاريف</option><option value="income">دخل آخر</option></select></div><div><label>الفئة</label><input id="fCat" placeholder="كراء، كهرباء، شراء..."></div><div><label>المبلغ</label><input id="fAmount" type="number" min="0" required></div><div><label>ملاحظة</label><input id="fNote"></div></div><button class="primary">حفظ</button></form>
+<table><thead><tr><th>التاريخ</th><th>النوع</th><th>الفئة</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody id="finTable"></tbody></table></section>
+
+<section id="employees" class="screen"><h2>👥 العمال</h2>
+<form id="empForm"><div class="row"><div><label>الاسم</label><input id="eName" required></div><div><label>المنصب</label><input id="eRole"></div><div><label>الراتب</label><input id="eSalary" type="number"></div><div><label>الحضور</label><select id="ePresent"><option>حاضر</option><option>غائب</option></select></div></div><button class="primary">إضافة</button></form>
+<table><thead><tr><th>الاسم</th><th>المنصب</th><th>الراتب</th><th>الحضور</th></tr></thead><tbody id="empTable"></tbody></table></section>
+
+<section id="reports" class="screen"><h2>📊 التقارير</h2><div class="grid"><div class="card">رقم الأعمال<div class="metric" id="rSales">0</div></div><div class="card">التكلفة<div class="metric" id="rCost">0</div></div><div class="card">الهامش<div class="metric" id="rMargin">0</div></div><div class="card">المصاريف<div class="metric" id="rExp">0</div></div><div class="card">النتيجة<div class="metric" id="rResult">0</div></div><div class="card">قيمة المخزون<div class="metric" id="rStock">0</div></div></div>
+<button class="secondary" onclick="backup()">📤 تصدير نسخة احتياطية</button> <button class="secondary" onclick="restore()">📥 استيراد نسخة</button><input type="file" id="restoreFile" accept=".json" hidden></section>
+</main>
+<script>
+const KEY='191V2';const nav=[['dash','الرئيسية'],['pos','البيع'],['stock','المخزون'],['recipes','المنتجات'],['finance','المالية'],['employees','العمال'],['reports','التقارير']];
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+items:[
+['لحم','g',0.9,5],['دجاج','g',0.45,10],['Crispy','g',0.7,10],['خبز','pièce',25,20],['Tortilla','pièce',35,20],
+['بطاطا','g',0.10,1000],['Fromage','pièce',25,20],['Œuf','pièce',30,10],['Salade','g',0.12,500],['Tomate','g',0.15,500],
+['Oignon','g',0.10,500],['Cornichon','g',0.15,300],['Sauce','g',0.10,500],['Boisson','pièce',60,20],['Emballage','pièce',10,20]
+].map(x=>({name:x[0],unit:x[1],cost:x[2],qty:x[3],min:x[3]*.2})),
+products:[
+['Burger Viande',200,130],['Burger Poulet',180,115],['Burger Crispy',250,155],['Poutine Viande',500,290],['Poutine Poulet',500,270],['Poutine Crispy',600,340],['Tacos Poulet',400,240],['Tacos Viande',400,255],['Tacos Crispy',500,300],['Frites',100,55],['Œuf',50,30],['Fromage',50,25],['Concombre/Cornichon',20,8],['Sauce',20,7],['Boisson',100,60]
+].map(x=>({name:x[0],price:x[1],cost:x[2]})),orders:[],finance:[],employees:[]
+};
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function money(x){return Math.round(x).toLocaleString('fr-DZ')+' DA'}
+function today(){return new Date().toLocaleDateString('fr-DZ')}
+document.getElementById('nav').innerHTML=nav.map((n,i)=>`<button class="${i?'':'active'}" onclick="go('${n[0]}',this)">${n[1]}</button>`).join('');
+function go(id,b){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()}
+let cart=[];
+function addCart(i){let p=db.products[i],x=cart.find(x=>x.i===i);if(x)x.q++;else cart.push({i,q:1});renderCart()}
+function renderCart(){document.getElementById('cart').innerHTML=cart.map((x,k)=>`<div class="cartrow"><span>${db.products[x.i].name} × ${x.q}</span><button class="danger" onclick="cart.splice(${k},1);renderCart()">×</button></div>`).join('');document.getElementById('cartTotal').textContent=money(cart.reduce((a,x)=>a+db.products[x.i].price*x.q,0))}
+function clearCart(){cart=[];renderCart()}
+function checkout(){if(!cart.length)return alert('الطلب فارغ');let total=0,cost=0;cart.forEach(x=>{let p=db.products[x.i];total+=p.price*x.q;cost+=p.cost*x.q});db.orders.push({date:new Date().toISOString(),items:cart.map(x=>({name:db.products[x.i].name,q:x.q})),total,cost});clearCart();save();alert('تم تسجيل البيع')}
+function render(){
+document.getElementById('prodBtns').innerHTML=db.products.map((p,i)=>`<div class="prod"><b>${p.name}</b><small>${money(p.price)} • coût ${money(p.cost)}</small><button class="primary" onclick="addCart(${i})">إضافة</button></div>`).join('');
+let sales=db.orders.reduce((a,o)=>a+o.total,0),cost=db.orders.reduce((a,o)=>a+o.cost,0),exp=db.finance.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0),income=db.finance.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),stock=db.items.reduce((a,x)=>a+x.qty*x.cost,0),margin=sales-cost;
+document.getElementById('mSales').textContent=money(sales);document.getElementById('mOrders').textContent=db.orders.length;document.getElementById('mCost').textContent=money(cost);document.getElementById('mMargin').textContent=money(margin);document.getElementById('mExp').textContent=money(exp);document.getElementById('mResult').textContent=money(margin-exp+income);
+document.getElementById('alerts').innerHTML=db.items.filter(x=>x.qty<=x.min).length?`<div class="alert">⚠️ توجد مواد منخفضة في المخزون.</div>`:`<div class="alert ok">✓ المخزون فوق حدود التنبيه.</div>`;
+document.getElementById('sItem').innerHTML=db.items.map((x,i)=>`<option value="${i}">${x.name}</option>`).join('');
+document.getElementById('stockTable').innerHTML=db.items.map(x=>`<tr><td>${x.name}</td><td>${x.unit}</td><td>${x.qty}</td><td>${money(x.cost)}</td><td>${money(x.qty*x.cost)}</td><td>${x.qty<=x.min?'⚠️ منخفض':'✓'}</td></tr>`).join('');
+document.getElementById('recipeTable').innerHTML=db.products.map(p=>`<tr><td>${p.name}</td><td>${money(p.price)}</td><td>${money(p.cost)}</td><td>${money(p.price-p.cost)}</td><td>${Math.round((p.price-p.cost)/p.price*100)}%</td></tr>`).join('');
+document.getElementById('finTable').innerHTML=db.finance.slice().reverse().map(x=>`<tr><td>${x.date}</td><td>${x.type==='expense'?'مصاريف':'دخل'}</td><td>${x.cat}</td><td>${money(x.amount)}</td><td>${x.note||''}</td></tr>`).join('');
+document.getElementById('empTable').innerHTML=db.employees.map(x=>`<tr><td>${x.name}</td><td>${x.role}</td><td>${money(x.salary||0)}</td><td>${x.present}</td></tr>`).join('');
+document.getElementById('rSales').textContent=money(sales+income);document.getElementById('rCost').textContent=money(cost);document.getElementById('rMargin').textContent=money(margin);document.getElementById('rExp').textContent=money(exp);document.getElementById('rResult').textContent=money(margin-exp+income);document.getElementById('rStock').textContent=money(stock);renderCart()
+}
+document.getElementById('stockForm').onsubmit=e=>{e.preventDefault();let x=db.items[+sItem.value];x.qty+=+sQty.value;if(x.qty<0)x.qty=0;e.target.reset();save()}
+document.getElementById('finForm').onsubmit=e=>{e.preventDefault();db.finance.push({date:today(),type:fType.value,cat:fCat.value,amount:+fAmount.value,note:fNote.value});e.target.reset();save()}
+document.getElementById('empForm').onsubmit=e=>{e.preventDefault();db.employees.push({name:eName.value,role:eRole.value,salary:+eSalary.value,present:ePresent.value});e.target.reset();save()}
+function backup(){let b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='191-backup.json';a.click()}
+function restore(){document.getElementById('restoreFile').click()}
+document.getElementById('restoreFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save();alert('تم الاسترجاع')}catch{alert('ملف غير صالح')}};r.readAsText(f)}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script></body></html>
